@@ -35,7 +35,7 @@ export const CONTENT = {
     {
       id: 2,
       title: { en: "Nebula Mobile App", zh: "Nebula 移动应用" },
-      category: { en: "UI/UX Design", zh: "UI/UX 设计" },
+      category: { en: "UI/UX Design", zh: "线下设计" },
       image: "https://picsum.photos/seed/nebula/1200/800",
       description: { en: "A futuristic social networking app focused on privacy and speed.", zh: "一款专注于隐私和速度的未来派社交网络应用。" }
     },
