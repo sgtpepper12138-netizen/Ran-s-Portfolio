@@ -43,7 +43,7 @@ const CustomCursor: React.FC = () => {
   return (
     <>
       <motion.div
-        className="fixed top-0 left-0 w-8 h-8 rounded-full border border-white/30 pointer-events-none z-[9999] hidden lg:block"
+        className="fixed top-0 left-0 w-8 h-8 rounded-full border border-white/30 pointer-events-none z-[100001] hidden lg:block"
         style={{
           x: cursorX,
           y: cursorY,
@@ -54,7 +54,7 @@ const CustomCursor: React.FC = () => {
         transition={{ type: 'spring', damping: 20, stiffness: 250, mass: 0.5 }}
       />
       <motion.div
-        className="fixed top-0 left-0 w-1.5 h-1.5 bg-white rounded-full pointer-events-none z-[9999] hidden lg:block"
+        className="fixed top-0 left-0 w-1.5 h-1.5 bg-white rounded-full pointer-events-none z-[100001] hidden lg:block"
         style={{
           x: mousePosition.x - 3,
           y: mousePosition.y - 3,
