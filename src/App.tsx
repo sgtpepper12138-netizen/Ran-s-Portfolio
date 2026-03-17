@@ -4,11 +4,111 @@ import { Globe, ArrowRight, Github, Instagram, Mail } from 'lucide-react';
 import { CONTENT, Project } from './constants';
 import CustomCursor from './components/CustomCursor';
 import Modal from './components/Modal';
+import InteractiveTitle from './components/InteractiveTitle';
+
+interface ProjectCardProps {
+  project: any;
+  index: number;
+  lang: 'en' | 'zh';
+  isMobile: boolean;
+  onClick: () => void;
+}
+
+const ProjectCard: React.FC<ProjectCardProps> = ({ project, index, lang, isMobile, onClick }) => {
+  const cardRef = useRef(null);
+  const { scrollYProgress: cardProgress } = useScroll({
+    target: cardRef,
+    offset: ["start end", "end start"]
+  });
+
+  // Much more stable spring settings for mobile to prevent "nervous" jitter
+  const springConfig = isMobile 
+    ? { stiffness: 40, damping: 40, restDelta: 0.01 } 
+    : { stiffness: 100, damping: 30, restDelta: 0.001 };
+
+  const smoothCardProgress = useSpring(cardProgress, springConfig);
+  
+  // Stronger, more varied parallax - Disabled on mobile for stability
+  const parallaxValues = isMobile ? [0, 0] : [
+    [-120, 120],
+    [80, -80],
+    [-60, 180],
+    [150, -50]
+  ][index % 4];
+  
+  const y = useTransform(smoothCardProgress, [0, 1], parallaxValues);
+  const rotate = useTransform(smoothCardProgress, [0, 1], isMobile ? [0, 0] : [index % 2 === 0 ? -2 : 2, index % 2 === 0 ? 2 : -2]);
+  const opacity = useTransform(smoothCardProgress, [0, 0.1, 0.9, 1], [0, 1, 1, 0]);
+  
+  // Inner image parallax - Reduced range on mobile for stability
+  const imgY = useTransform(smoothCardProgress, [0, 1], isMobile ? ["-4%", "4%"] : ["-10%", "10%"]);
+
+  // More "broken" grid spans - Simplified for mobile
+  const gridClasses = [
+    "md:col-span-8 aspect-[16/10]",
+    "md:col-span-4 aspect-[3/4] md:mt-40",
+    "md:col-span-5 aspect-square md:-mt-20",
+    "md:col-span-7 aspect-[16/9] md:mt-10"
+  ][index % 4];
+
+  return (
+    <motion.div
+      ref={cardRef}
+      style={{ y, rotate, opacity }}
+      className={`${gridClasses} group cursor-pointer relative mb-12 md:mb-0`}
+      onClick={onClick}
+    >
+      <div className="w-full h-full relative overflow-hidden rounded-2xl border border-white/5 shadow-2xl">
+        <motion.img 
+          style={{ y: imgY, scale: 1.2 }} // Scale up slightly to allow room for inner parallax
+          whileHover={{ scale: 1.25 }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          src={project.image} 
+          alt={project.title[lang]}
+          className="absolute inset-0 w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-1000 will-change-transform"
+          referrerPolicy="no-referrer"
+        />
+        
+        {/* Editorial Style Label - Visible by default */}
+        <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10">
+          <div className="overflow-hidden">
+            <motion.span 
+              initial={{ y: "100%" }}
+              whileInView={{ y: 0 }}
+              className="block text-[9px] md:text-[10px] uppercase tracking-[0.4em] text-white/50 font-medium"
+            >
+              0{index + 1} / {project.category[lang]}
+            </motion.span>
+          </div>
+        </div>
+
+        <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6 z-10">
+          <motion.h3 
+            className="text-lg md:text-2xl font-serif text-white/90 leading-none"
+          >
+            {project.title[lang]}
+          </motion.h3>
+        </div>
+
+        {/* Subtle Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-80 group-hover:opacity-40 transition-opacity duration-700" />
+      </div>
+    </motion.div>
+  );
+};
 
 export default function App() {
   const [lang, setLang] = useState<'en' | 'zh'>('en');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -25,9 +125,11 @@ export default function App() {
   const heroY = useTransform(smoothProgress, [0, 0.2], [0, -100]);
   const heroOpacity = useTransform(smoothProgress, [0, 0.15], [1, 0]);
   const bgScale = useTransform(smoothProgress, [0, 1], [1, 1.2]);
+  const aboutImgY = useTransform(smoothProgress, [0.5, 0.8], isMobile ? [20, -20] : [50, -50]);
 
   return (
     <div ref={containerRef} className="relative min-h-screen font-sans selection:bg-white selection:text-black">
+      <div className="noise-overlay" />
       <CustomCursor />
       
       {/* Background Elements */}
@@ -35,8 +137,21 @@ export default function App() {
         style={{ scale: bgScale }}
         className="fixed inset-0 z-[-1] overflow-hidden"
       >
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-500/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-500/10 blur-[120px]" />
+        <motion.div 
+          style={{ y: useTransform(smoothProgress, [0, 1], [0, -200]) }}
+          className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-500/10 blur-[120px]" 
+        />
+        <motion.div 
+          style={{ y: useTransform(smoothProgress, [0, 1], [0, 200]) }}
+          className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px]" 
+        />
+        <motion.div 
+          style={{ 
+            x: useTransform(smoothProgress, [0, 1], [-100, 100]),
+            y: useTransform(smoothProgress, [0, 1], [100, -100])
+          }}
+          className="absolute top-1/2 left-1/4 w-[30%] h-[30%] rounded-full bg-teal-500/5 blur-[100px]" 
+        />
       </motion.div>
 
       {/* Navigation */}
@@ -82,14 +197,10 @@ export default function App() {
           >
             Portfolio 2026
           </motion.span>
-          <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+          <InteractiveTitle 
+            text={CONTENT.hero.title[lang]}
             className="text-5xl md:text-8xl font-serif leading-[1.1] mb-8"
-          >
-            {CONTENT.hero.title[lang]}
-          </motion.h1>
+          />
           <motion.p 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -127,50 +238,28 @@ export default function App() {
       {/* Work Section */}
       <section id="work" className="py-32 px-6 md:px-12">
         <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-end mb-16">
+          <div className="flex justify-between items-end mb-24">
             <h2 className="text-4xl md:text-6xl font-serif">{CONTENT.nav.work[lang]}</h2>
             <div className="text-white/40 text-sm uppercase tracking-widest">Selected Projects</div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-20">
             {CONTENT.projects.map((project, index) => (
-              <motion.div
+              <ProjectCard 
                 key={project.id}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index % 2 * 0.2 }}
-                className="group cursor-pointer"
+                project={project}
+                index={index}
+                lang={lang}
+                isMobile={isMobile}
                 onClick={() => setSelectedProject(project)}
-              >
-                <div className="relative aspect-[4/5] overflow-hidden rounded-3xl mb-6 liquid-glass">
-                  <motion.img 
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
-                    src={project.image} 
-                    alt={project.title[lang]}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                </div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-2xl font-medium mb-1">{project.title[lang]}</h3>
-                    <p className="text-white/40 text-sm uppercase tracking-wider">{project.category[lang]}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                    <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform" />
-                  </div>
-                </div>
-              </motion.div>
+              />
             ))}
           </div>
         </div>
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-32 px-6 md:px-12 bg-white/5 backdrop-blur-sm">
+      <section id="about" className="py-32 px-6 md:px-12 bg-white/5 backdrop-blur-sm overflow-hidden">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-4xl md:text-6xl font-serif mb-8">{CONTENT.about.title[lang]}</h2>
@@ -197,14 +286,20 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div className="relative aspect-square rounded-full overflow-hidden liquid-glass p-4">
-            <img 
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative aspect-square rounded-full overflow-hidden liquid-glass p-4"
+          >
+            <motion.img 
+              style={{ y: aboutImgY }}
               src="https://picsum.photos/seed/designer/800/800" 
               alt="Designer" 
-              className="w-full h-full object-cover rounded-full grayscale"
+              className="w-full h-full object-cover rounded-full grayscale scale-110 will-change-transform"
               referrerPolicy="no-referrer"
             />
-          </div>
+          </motion.div>
         </div>
       </section>
 
