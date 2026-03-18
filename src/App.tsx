@@ -4,7 +4,7 @@ import { Globe, ArrowRight, Github, Instagram, Mail } from 'lucide-react';
 import { CONTENT, Project } from './constants';
 import CustomCursor from './components/CustomCursor';
 import Modal from './components/Modal';
-import InteractiveTitle from './components/InteractiveTitle';
+import InteractiveTitle, { FluidCanvas } from './components/InteractiveTitle';
 
 interface ProjectCardProps {
   project: any;
@@ -130,6 +130,7 @@ export default function App() {
   return (
     <div ref={containerRef} className="relative min-h-screen font-sans selection:bg-white selection:text-black">
       <div className="noise-overlay" />
+      <FluidCanvas />
       <CustomCursor />
       
       {/* Background Elements */}

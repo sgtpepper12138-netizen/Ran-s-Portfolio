@@ -11,7 +11,7 @@ interface Particle {
   size: number;
 }
 
-const FluidCanvas: React.FC = () => {
+export const FluidCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
   const mouse = useRef({ x: 0, y: 0, active: false });
@@ -57,40 +57,41 @@ const FluidCanvas: React.FC = () => {
     const update = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      if (!isMobile.current && mouse.current.active) {
-        for (let i = 0; i < 3; i++) {
+      if (mouse.current.active) {
+        const count = isMobile.current ? 1 : 3;
+        for (let i = 0; i < count; i++) {
           particles.current.push(createParticle(mouse.current.x, mouse.current.y));
         }
       }
 
-      if (isMobile.current && Math.random() < 0.05) {
+      // Auto-particles (flickering) on all platforms - increased frequency
+      const autoChance = isMobile.current ? 0.08 : 0.05;
+      if (Math.random() < autoChance) {
         const x = Math.random() * canvas.width;
-        const y = (Math.random() * 0.4 + 0.3) * canvas.height;
+        const y = Math.random() * canvas.height;
         particles.current.push(createParticle(x, y, true));
       }
 
       ctx.globalCompositeOperation = 'screen';
       
       particles.current = particles.current.filter(p => {
-        // Apply parallax/drag on mobile scroll
-        if (isMobile.current) {
-          p.y -= scrollVelocity.current * 0.2; // Parallax drag
-        }
+        // Apply parallax/drag on scroll - slightly stronger
+        p.y -= scrollVelocity.current * 0.12;
 
         p.x += p.vx;
         p.y += p.vy;
-        p.life -= isMobile.current ? 0.005 : 0.015;
-        p.size *= isMobile.current ? 0.995 : 0.98;
+        p.life -= isMobile.current ? 0.004 : 0.006;
+        p.size *= isMobile.current ? 0.996 : 0.992;
 
         if (p.life <= 0) return false;
 
         ctx.beginPath();
         const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
         
-        // Brighter on scroll
-        const brightnessBoost = isMobile.current ? Math.min(Math.abs(scrollVelocity.current) * 2, 100) : 0;
-        const baseAlpha = isMobile.current ? 100 : 255;
-        const alpha = Math.floor(Math.min(p.life * baseAlpha + brightnessBoost, 255)).toString(16).padStart(2, '0');
+        // Brighter on scroll or interaction
+        const scrollBoost = Math.min(Math.abs(scrollVelocity.current) * 2, 120);
+        const baseAlpha = isMobile.current ? 120 : 180;
+        const alpha = Math.floor(Math.min(p.life * baseAlpha + scrollBoost, 255)).toString(16).padStart(2, '0');
         
         gradient.addColorStop(0, p.color + alpha);
         gradient.addColorStop(1, 'transparent');
@@ -103,13 +104,12 @@ const FluidCanvas: React.FC = () => {
       });
 
       // Decay scroll velocity
-      scrollVelocity.current *= 0.9;
+      scrollVelocity.current *= 0.94;
 
       animationFrame = requestAnimationFrame(update);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (isMobile.current) return;
       mouse.current = { x: e.clientX, y: e.clientY, active: true };
     };
 
@@ -137,8 +137,8 @@ const FluidCanvas: React.FC = () => {
   return (
     <canvas 
       ref={canvasRef} 
-      className="fixed inset-0 pointer-events-none z-0 opacity-60"
-      style={{ filter: 'blur(12px) contrast(1.1)' }}
+      className="fixed inset-0 pointer-events-none z-[1] opacity-50"
+      style={{ filter: 'blur(15px) contrast(1.2)' }}
     />
   );
 };
@@ -255,7 +255,6 @@ interface InteractiveTitleProps {
 const InteractiveTitle: React.FC<InteractiveTitleProps> = ({ text, className }) => {
   return (
     <div className="relative" key={text}>
-      <FluidCanvas />
       <h1 className={`${className} relative z-10`}>
         {text.split('').map((char, i) => (
           <InteractiveCharacter key={`${text}-${i}`} char={char} index={i} />
