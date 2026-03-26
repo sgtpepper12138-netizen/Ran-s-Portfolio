@@ -21,9 +21,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, index, lang, isMobil
     offset: ["start end", "end start"]
   });
 
-  // Much more stable spring settings for mobile to prevent "nervous" jitter
+  // More responsive spring settings for mobile to make color pop faster
   const springConfig = isMobile 
-    ? { stiffness: 40, damping: 40, restDelta: 0.01 } 
+    ? { stiffness: 90, damping: 30, restDelta: 0.01 } 
     : { stiffness: 100, damping: 30, restDelta: 0.001 };
 
   const smoothCardProgress = useSpring(cardProgress, springConfig);
@@ -51,6 +51,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, index, lang, isMobil
     "md:col-span-7 aspect-[16/9] md:mt-10"
   ][index % 4];
 
+  // Tighter scroll range for mobile highlighting to make it "pop" faster
+  const grayscale = useTransform(smoothCardProgress, [0, 0.42, 0.5, 0.58, 1], [100, 100, 0, 100, 100]);
+  const brightness = useTransform(smoothCardProgress, [0, 0.42, 0.5, 0.58, 1], [75, 75, 100, 75, 75]);
+  const scrollFilter = useTransform([grayscale, brightness], ([g, b]) => `grayscale(${g}%) brightness(${b}%)`);
+
   return (
     <motion.div
       ref={cardRef}
@@ -60,12 +65,16 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, index, lang, isMobil
     >
       <div className="w-full h-full relative overflow-hidden rounded-2xl border border-white/5 shadow-2xl">
         <motion.img 
-          style={{ y: imgY, scale: 1.2 }} // Scale up slightly to allow room for inner parallax
+          style={{ 
+            y: imgY, 
+            scale: 1.2,
+            filter: isMobile ? scrollFilter : undefined
+          }} // Scale up slightly to allow room for inner parallax
           whileHover={{ scale: 1.25 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           src={project.image} 
           alt={project.title[lang]}
-          className="absolute inset-0 w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-1000 will-change-transform"
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 will-change-transform ${!isMobile ? 'grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100' : ''}`}
           referrerPolicy="no-referrer"
         />
         

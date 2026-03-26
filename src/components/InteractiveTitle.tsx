@@ -137,7 +137,7 @@ export const FluidCanvas: React.FC = () => {
   return (
     <canvas 
       ref={canvasRef} 
-      className="fixed inset-0 pointer-events-none z-[1] opacity-50"
+      className="fixed inset-0 pointer-events-none z-[-2] opacity-50"
       style={{ filter: 'blur(15px) contrast(1.2)' }}
     />
   );
